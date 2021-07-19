@@ -145,7 +145,7 @@ app.use(async (req, rep) => {
   }
   rep.headers = Object.assign(
     {
-      "Cache-Control": "max-age=600, s-maxage=300",
+      "Cache-Control": "nocache",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "*",
       "Access-Control-Max-Age": "86400000",
