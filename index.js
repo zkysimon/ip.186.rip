@@ -196,10 +196,13 @@ app.use(async (req, rep) => {
         case "prefixLength":
           rep.send(JSON.stringify(info.prefixLength));
           break;
+        default:
+          rep.statusCode = 404;
+          rep.send("404 method not found on info."); 
+          break;   
       }
     } catch (e) {
-      rep.statusCo;
-      de = 404;
+      rep.statusCode = 404;
       rep.send("404 method not found on info.");
     }
     rep.end("\n");
@@ -230,13 +233,19 @@ app.use(async (req, rep) => {
         case "prefixLength":
           rep.send(JSON.stringify(info.prefixLength));
           break;
+        default:
+          rep.statusCode = 404;
+          rep.send("404 method not found on info."); 
+          break; 
       }
     } catch (e) {
-      rep.statusCo;
-      de = 404;
+      rep.statusCode = 404;
       rep.send("404 method not found on info.");
     }
     rep.end("\n");
+  }else{
+    rep.statusCode = 404;
+    rep.send("404 method not found."); 
   }
 });
 app.listen(process.env.PORT || 8080);
