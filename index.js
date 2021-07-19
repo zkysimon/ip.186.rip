@@ -11,6 +11,30 @@ const app = new sw2express({
   cluster: 1,
 });
 
+Object.flatten = function(data) {
+  var result = {};
+  function recurse (cur, prop) {
+      if (Object(cur) !== cur) {
+          result[prop] = cur;
+      } else if (Array.isArray(cur)) {
+           for(var i=0, l=cur.length; i<l; i++)
+               recurse(cur[i], prop +"[" + i +"]");
+          if (l == 0)
+              result[prop] = [];
+      } else {
+          var isEmpty = true;
+          for (var p in cur) {
+              isEmpty = false;
+              recurse(cur[p], prop ? prop+"."+p : p);
+          }
+          if (isEmpty && prop)
+              result[prop] = {};
+      }
+  }
+  recurse(data,"");
+  return result;
+}
+
 const getPage = async (fileName) => {
   return fs.readFileSync(`./pages/${fileName}.ejs`, {
     encoding: "utf8",
@@ -174,35 +198,23 @@ app.use(async (req, rep) => {
     path.pathname.startsWith("/") &&
     path.pathname.split("/").length - 1 === 1
   ) {
-    const method = path.pathname.replace("/", "").toLowerCase();
+    const method = path.pathname.replace("/", "");
     const info = await getFromGeoLite2.getJSON(
       rep.realip,
       path.searchParams.get("lang") || "en"
     );
     try {
-      switch (method) {
-        case "ip":
-          rep.send(info.ip);
-          break;
-        case "asn":
-          rep.send(JSON.stringify(info.asn));
-          break;
-        case "location":
-          rep.send(JSON.stringify(info.location));
-          break;
-        case "country":
-          rep.send(JSON.stringify(info.country));
-          break;
-        case "prefixLength":
-          rep.send(JSON.stringify(info.prefixLength));
-          break;
-        default:
-          rep.statusCode = 404;
-          rep.send("404 method not found on info."); 
-          break;   
+      const answer = Object.flatten(info)[method];
+      rep.setHeader("Content-Type", "text/plain; charset=utf-8");
+      if(answer){
+        rep.send(answer);
+      }else{
+        rep.statusCode = 404;
+        rep.send("404 method not found on info.");
       }
     } catch (e) {
       rep.statusCode = 404;
+      console.log("Catch error: " + e);
       rep.send("404 method not found on info.");
     }
     rep.end("\n");
@@ -211,35 +223,23 @@ app.use(async (req, rep) => {
     path.pathname.split("/").length - 1 === 2 &&
     maxmind.validate(path.pathname.split("/")[1])
   ) {
-    const method = path.pathname.split("/")[2].toLowerCase();
+    const method = path.pathname.split("/")[2];
     const info = await getFromGeoLite2.getJSON(
       path.pathname.split("/")[1],
       path.searchParams.get("lang") || "en"
     );
     try {
-      switch (method) {
-        case "ip":
-          rep.send(info.ip);
-          break;
-        case "asn":
-          rep.send(JSON.stringify(info.asn));
-          break;
-        case "location":
-          rep.send(JSON.stringify(info.location));
-          break;
-        case "country":
-          rep.send(JSON.stringify(info.country));
-          break;
-        case "prefixLength":
-          rep.send(JSON.stringify(info.prefixLength));
-          break;
-        default:
-          rep.statusCode = 404;
-          rep.send("404 method not found on info."); 
-          break; 
+      const answer = Object.flatten(info)[method];
+      rep.setHeader("Content-Type", "text/plain; charset=utf-8");
+      if(answer){
+        rep.send(answer);
+      }else{
+        rep.statusCode = 404;
+        rep.send("404 method not found on info.");
       }
     } catch (e) {
       rep.statusCode = 404;
+      console.log("Catch error: " + e);
       rep.send("404 method not found on info.");
     }
     rep.end("\n");
