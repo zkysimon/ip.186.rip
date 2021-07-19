@@ -23,7 +23,7 @@ const sendForIP = async (path, ip, req, rep) => {
   if (path.searchParams.get("ip") !== null) {
     ip = path.searchParams.get("ip");
   }
-  if (typeof req.headers["sec-fetch-dest"] !== "undefined") type = "jsonp";
+  if (typeof req.headers["sec-fetch-dest"] !== "undefined" && req.headers["sec-fetch-dest"] === "script") type = "jsonp";
   else if (path.searchParams.get("type") !== null)
     type = path.searchParams.get("type");
   else if (typeof req.headers.accept === "undefined") type = "json";
