@@ -151,7 +151,7 @@
             font-size: 15px;
         }
 
-        api-doc > p {
+        api-doc>p {
             overflow-y: auto;
             width: 100%;
         }
@@ -440,17 +440,21 @@
                 background-color: rgb(0, 0, 0);
                 color: rgba(255, 255, 255, 0.86);
             }
-            header code{
+
+            header code {
                 border: 1px solid rgb(40 40 40 / 73%);
                 background-color: rgb(40 40 40 / 73%);
             }
-            header p{
+
+            header p {
                 color: rgba(255, 255, 255, 0.4);
             }
+
             footer {
                 border-top: 1px solid #3d3d3d;
             }
         }
+
         ::-webkit-scrollbar {
             width: 4px;
         }
@@ -489,6 +493,7 @@ enum type {
     "jsonp", // text/javascript in Accept Header.
     "yaml", // text/yaml in Accept Header.
     "rawjson", // Can only be determined by the type param.
+    "humanReadable", // Can only be determined by the type param.
 }
 /**
  * Decide whether the JSON text is formatted.
@@ -557,9 +562,12 @@ enum Selector {
     </api-doc>
 
     <footer>
-        <p><a href="https://github.com/186526/ip.186.rip">IP.186.RIP</a>. Built by Sw2Express @ Node.js. <br><br><small>This
+        <p><a href="https://github.com/186526/ip.186.rip">IP.186.RIP</a>. Built by Sw2Express @ Node.js. <br>
+            <small>Page Cache Key: <code><%= key %></code></small> <br><br>
+            <small>This
                 product includes GeoLite2 data created by MaxMind,
                 available from
-                <a href="https://www.maxmind.com">https://www.maxmind.com</a>.</small></p>
+                <a href="https://www.maxmind.com">https://www.maxmind.com</a>.</small>
+        </p>
     </footer>
 </body>
