@@ -4,7 +4,10 @@ import process from "process";
 import os from "os";
 
 const app = new sw2express({
-  cluster: process.env.CLUSTER || os.cpus().length - 1 > 4 ? 4 : os.cpus().length - 1|| 1,
+  cluster:
+    process.env.CLUSTER || os.cpus().length - 1 > 4
+      ? 4
+      : os.cpus().length - 1 || 1,
   ETag: true,
 });
 
@@ -37,7 +40,7 @@ app.use(async (req, rep) => {
 });
 
 const main = async () => {
-  (await import("./api/ip.js")).default(app);
+  (await import("./api/route.js")).default(app);
   app.listen(process.env.PORT || 8080);
 };
 

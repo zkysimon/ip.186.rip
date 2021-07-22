@@ -1,4 +1,5 @@
 import maxmind from "maxmind";
+import { whoisLookupJSON } from '../api/whois.js';
 const cityReader = maxmind.open("./file/GeoLite2-City.mmdb");
 const asnReader = maxmind.open("./file/GeoLite2-ASN.mmdb");
 export default async (ip) => {
@@ -41,7 +42,20 @@ export async function getJSON(ip, lang = "en") {
       id: cityResponse.country.geoname_id,
       name: cityResponse.country.names[lang],
     };
-    answer.prefixLength = (await asnReader).getWithPrefixLength(ip)[1];
   } catch (e) {}
+  answer.prefixLength = (await asnReader).getWithPrefixLength(ip)[1];
+  try {
+    const whoisInfo = await whoisLookupJSON(ip);
+    answer.description = whoisInfo.map(data=>{
+      if(data.attribute === "descr") return data.value;
+      else return null;
+    }).filter(e=>e);
+    answer.route = whoisInfo.map(data=>{
+      if(data.attribute === "route") return data.value;
+      else return null;
+    }).filter(e=>e)[0];
+  } catch (e) {
+    console.log(e);
+  }
   return answer;
 }

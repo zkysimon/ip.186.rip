@@ -1,7 +1,5 @@
 import ejs from "ejs";
 import * as getFromGeoLite2 from "../utils/maxmind.js";
-import { whoisLookup as lookup } from "./whois.js";
-import maxmind from "maxmind";
 import xml from "xml2js";
 import yaml from "yaml";
 import fs from "fs";
@@ -196,111 +194,23 @@ const sendForIP = async (path, ip, req, rep) => {
   rep.isEnd = true;
 };
 
-export default (app) => {
-  app.use(async (req, rep) => {
-    const path = new URL(req.path, "https://ip.186.rip");
-    if (path.pathname === "/") {
-      await sendForIP(path, rep.realip, req, rep);
-    } else if (path.pathname.startsWith("/whois/")) {
-      var type = "plain";
-
-      if (
-        typeof req.headers["sec-fetch-dest"] !== "undefined" &&
-        req.headers["sec-fetch-dest"] === "script"
-      )
-        type = "jsonp";
-      else if (path.searchParams.get("type") !== null)
-        type = path.searchParams.get("type");
-      else if (req.headers.accept.includes("text/html")) type = "html";
-      else if (req.headers.accept.includes("text/javascript")) type = "jsonp";
-
-      const address =
-        path.searchParams.get("address") ||
-        path.pathname.replace("/whois/", "");
-
-      try {
-        const answer = await lookup(address);
-        //console.log(answer);
-
-        switch (type) {
-          case "plain":
-            rep.setHeader("Content-Type", "text/plain; charset=utf-8");
-            rep.send(answer);
-            break;
-          case "jsonp":
-            rep.setHeader("Content-Type", "text/javascript; charset=utf-8");
-            const callback = path.searchParams.get("callback") || "ip_186_rip";
-            rep.send(`${callback}("${answer}")`);
-            break;
-          case "html":
-            break;
-          default:
-            throw new Error("Invalid method: " + type);
-        }
-        rep.end("\n");
-      } catch (e) {
-        rep.statusCode = 500;
-        rep.send(`500 Server Error\n${e}`);
-      }
-
-      return;
-    } else if (
-      path.pathname.startsWith("/") &&
-      maxmind.validate(path.pathname.replace("/", ""))
-    ) {
-      await sendForIP(path, path.pathname.replace("/", ""), req, rep);
-    } else if (
-      path.pathname.startsWith("/") &&
-      path.pathname.split("/").length - 1 === 1
-    ) {
-      const method = path.pathname.replace("/", "");
-      const info = await getFromGeoLite2.getJSON(
-        rep.realip,
-        path.searchParams.get("lang") || "en"
-      );
-      try {
-        const answer = Object.flatten(info)[method];
-        rep.setHeader("Content-Type", "text/plain; charset=utf-8");
-        if (answer) {
-          rep.send(answer);
-        } else {
-          rep.statusCode = 404;
-          rep.send("404 method not found on info.");
-        }
-      } catch (e) {
-        rep.statusCode = 404;
-        console.log("Catch error: " + e);
-        rep.send("404 method not found on info.");
-      }
-      rep.end("\n");
-    } else if (
-      path.pathname.startsWith("/") &&
-      path.pathname.split("/").length - 1 === 2 &&
-      maxmind.validate(path.pathname.split("/")[1])
-    ) {
-      const method = path.pathname.split("/")[2];
-      const info = await getFromGeoLite2.getJSON(
-        path.pathname.split("/")[1],
-        path.searchParams.get("lang") || "en"
-      );
-      try {
-        const answer = Object.flatten(info)[method];
-        rep.setHeader("Content-Type", "text/plain; charset=utf-8");
-        if (answer) {
-          rep.send(answer);
-        } else {
-          rep.statusCode = 404;
-          rep.send("404 method not found on info.");
-        }
-      } catch (e) {
-        rep.statusCode = 404;
-        console.log("Catch error: " + e);
-        rep.send("404 method not found on info.");
-      }
-      rep.end("\n");
+export const sendIP = sendForIP;
+export const sendSelector = async (method, ip, lang, rep) => {
+  const info = await getFromGeoLite2.getJSON(ip, lang);
+  try {
+    const answer = Object.flatten(info)[method];
+    rep.setHeader("Content-Type", "text/plain; charset=utf-8");
+    if (answer) {
+      rep.send(answer);
     } else {
       rep.statusCode = 404;
-      rep.send("404 method not found.");
+      rep.send("404 method not found on info.");
     }
-  });
+  } catch (e) {
+    rep.statusCode = 404;
+    console.log("Catch error: " + e);
+    rep.send("404 method not found on info.");
+  }
+  rep.end("\n");
+  return;
 };
