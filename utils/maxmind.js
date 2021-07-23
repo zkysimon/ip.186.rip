@@ -1,5 +1,6 @@
 import maxmind from "maxmind";
 import { whoisLookupJSON } from '../api/whois.js';
+import axios from "axios";
 const cityReader = maxmind.open("./file/GeoLite2-City.mmdb");
 const asnReader = maxmind.open("./file/GeoLite2-ASN.mmdb");
 export default async (ip) => {
@@ -22,6 +23,8 @@ export async function getJSON(ip, lang = "en") {
     ip: ip,
   };
   try {
+    const whoisInfo = whoisLookupJSON(ip);
+    let request = axios.get(`http://ip-api.com/json/${ip}?fields=status,city,zip,reverse,mobile,proxy,hosting&lang=${lang}`);
     answer.asn = {
       number: asnResponse.autonomous_system_number,
       organization: asnResponse.autonomous_system_organization,
@@ -42,18 +45,28 @@ export async function getJSON(ip, lang = "en") {
       id: cityResponse.country.geoname_id,
       name: cityResponse.country.names[lang],
     };
-  } catch (e) {}
-  answer.prefixLength = (await asnReader).getWithPrefixLength(ip)[1];
-  try {
-    const whoisInfo = await whoisLookupJSON(ip);
-    answer.description = whoisInfo.map(data=>{
+    answer.description = (await whoisInfo).map(data=>{
       if(data.attribute === "descr") return data.value;
       else return null;
     }).filter(e=>e);
-    answer.route = whoisInfo.map(data=>{
+    answer.route = (await whoisInfo).map(data=>{
       if(data.attribute === "route") return data.value;
       else return null;
     }).filter(e=>e)[0];
+    const data = (await request).data;
+    if(!data.status){ throw new Error(`API return Error.`)}
+    else{
+      answer.location.city = data.city;
+      answer.location.zip = data.zip;
+      answer.reverse = data.reverse;
+      answer.type = {
+        mobile: data.mobile,
+        proxy: data.proxy,
+        hosting: data.hosting,
+        is: data.mobile?"mobile":data.proxy?"proxy":data.hosting?"hosting":"other",
+      }
+    }
+    answer.prefixLength = (await asnReader).getWithPrefixLength(ip)[1];
   } catch (e) {
     console.log(e);
   }
