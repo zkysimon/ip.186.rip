@@ -15,13 +15,17 @@ const sendAssets = async(pathRoute,req,rep) => {
     rep.statusCode = 404;
     rep.send("404 Not Found.");
   }else{
-    const content = fs.readFileSync(`pages/assets/${file}`,{
-      encoding: 'utf8',
-    });
-    rep.setHeader("Content-Type",mime.contentType(path.extname(file)));
-    rep.setHeader("Content-Length",fs.statSync(`pages/assets/${file}`).size);
-    rep.setHeader("Cache-Control", "public, max-age=600;");
-    rep.send(content);
+    await new Promise(resolve=>{
+      rep.setHeader("Content-Type",mime.contentType(path.extname(file)));
+      rep.setHeader("Content-Length",fs.statSync(`pages/assets/${file}`).size);
+      rep.setHeader("Cache-Control", "public, max-age=600");
+      resolve();
+    }).then(e=>{
+      const content = fs.readFileSync(`pages/assets/${file}`,{
+        encoding: 'utf8',
+      });
+      rep.send(content);
+    })
   }
   rep.end('\n');
   return;

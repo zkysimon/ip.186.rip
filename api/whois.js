@@ -4,8 +4,8 @@ import highlight from "highlight.js";
 import fs from "fs";
 const kv = new WeakMap();
 const lookup = async (address) => {
-  if (kv.has({ address })) {
-    resolve(kv.get({ address }));
+  if (kv.has({ address:address })) {
+    resolve(kv.get({ address:address }));
   } else {
     const data = await new Promise((resolve, reject) => {
       whois.lookup(address, (err, data) => {
@@ -13,18 +13,18 @@ const lookup = async (address) => {
         else resolve(data);
       });
     })
-    kv.set({ address }, data);
+    kv.set({ address:address }, data);
     return data;
   }
 };
 const getPage = async (fileName) => {
-  if (kv.has({ fileName })) {
-    return kv.get({ fileName });
+  if (kv.has({ fileName:fileName })) {
+    return kv.get({ fileName:fileName });
   } else {
     const value = fs.readFileSync(`./pages/${fileName}.ejs`, {
       encoding: "utf8",
     });
-    kv.set({ fileName }, new String(value));
+    kv.set({ fileName:fileName }, new String(value));
     return value;
   }
 };

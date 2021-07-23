@@ -129,6 +129,12 @@ code,
 code * {
   font-family: "Fira Mono", monospace;
 }
+overflow-y {
+  overflow-y: auto;
+  width: 100%;
+  padding: 0;
+  display: inline-block;
+}
 pre {
   overflow-y: auto;
   padding: 3% 0;

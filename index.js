@@ -8,7 +8,7 @@ const app = new sw2express({
     process.env.CLUSTER || os.cpus().length - 1 > 4
       ? 4
       : os.cpus().length - 1 || 1,
-  ETag: true,
+  ETag: false,
   logger: true,
 });
 

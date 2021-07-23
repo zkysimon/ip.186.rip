@@ -16,23 +16,23 @@ const getkey = (key) => {
 const kv = new WeakMap();
 
 const getPage = async (fileName) => {
-  if (kv.has({ fileName })) {
-    return kv.get({ fileName });
+  if (kv.has({ fileName: fileName})) {
+    return kv.get({ fileName: fileName });
   } else {
     const value = fs.readFileSync(`./pages/${fileName}.ejs`, {
       encoding: "utf8",
     });
-    kv.set({ fileName }, new String(value));
+    kv.set({ fileName:fileName }, new String(value));
     return value;
   }
 };
 
 const pageCache = async (key, ifNot) => {
-  if (kv.has({ key })) {
-    return kv.get({ key });
+  if (kv.has({ key: key})) {
+    return kv.get({ key: key});
   } else {
     const value = await ifNot(key);
-    kv.set({ key }, value);
+    kv.set({ key:key }, value);
     return value;
   }
 };

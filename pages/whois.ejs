@@ -15,11 +15,11 @@
         <p>Powered by <a href="https://ip.186.rip/">IP.186.RIP</a>. A streamlined and simple api for IP address
             information, IPv4/IPv6 dual stack support.</p>
     </header>
-    <p>Request <pre><code>/whois/<%= address %>?type=plain</code></pre></p>
+    <p>Request <overflow-y><code>/whois/<%= address %>?type=plain</code></overflow-y></p>
 
     <pre><code type="text/plain"><%- highlight.highlight(answerPlain,{language:"yaml"}).value %></code></pre>
 
-    <p>Request <pre><code>/whois/<%= address %>?type=json&format=true</code></pre></p>
+    <p>Request <overflow-y><code>/whois/<%= address %>?type=json&format=true</code></overflow-y></p>
     
     <pre><code type="text/plain"><%- highlight.highlight(JSON.stringify(answerJSON,null,4),{language:"json"}).value %></code></pre>
 
