@@ -1,4 +1,7 @@
 import whois from "whois";
+import ejs from "ejs";
+import highlight from "highlight.js";
+import fs from "fs";
 const kv = new WeakMap();
 const lookup = async (address) => {
   if (kv.has({ address })) {
@@ -14,39 +17,52 @@ const lookup = async (address) => {
     return data;
   }
 };
+const getPage = async (fileName) => {
+  if (kv.has({ fileName })) {
+    return kv.get({ fileName });
+  } else {
+    const value = fs.readFileSync(`./pages/${fileName}.ejs`, {
+      encoding: "utf8",
+    });
+    kv.set({ fileName }, new String(value));
+    return value;
+  }
+};
 export const whoisLookup = lookup;
+export const whoisLookuptoJSON = (data) => {
+  let attr, attrColon, tempStr = '', returnArray = [];
+  data.split('\n').forEach(part => {
+    if (!part) return;
+
+    attrColon = part.indexOf(': ');
+    attr = part.substr(0, attrColon);
+
+    if (attr !== '') {
+      returnArray.push({
+        attribute: attr,
+        value: part.substr(attrColon + 1).trim()
+      });
+    }
+    else {
+      tempStr += part.substr(attrColon + 1).trim() + '\n';
+    }
+  });
+
+  returnArray.push({
+    "attribute": "End Text",
+    "value": tempStr
+  });
+
+  return returnArray;
+}
 export const whoisLookupJSON = async (address) => {
   if (kv.has({ address: address + '-json' })) {
     resolve(kv.get({ address: address + '-json' }));
   } else {
-    let attr, attrColon, tempStr = '', returnArray = [];
-
     const data = await lookup(address);
-
-    data.split('\n').forEach(part => {
-      if (!part) return;
-
-      attrColon = part.indexOf(': ');
-      attr = part.substr(0, attrColon);
-
-      if (attr !== '') {
-        returnArray.push({
-          attribute: attr,
-          value: part.substr(attrColon + 1).trim()
-        });
-      }
-      else {
-        tempStr += part.substr(attrColon + 1).trim() + '\n';
-      }
-    });
-
-    returnArray.push({
-      "attribute": "End Text",
-      "value": tempStr
-    });
-
-    kv.set({ address: address + '-json' }, returnArray);
-    return returnArray;
+    const answer = whoisLookuptoJSON(data);
+    kv.set({ address: address + '-json' }, answer);
+    return answer;
   }
 }
 export const sendWhois = async (path, req, rep) => {
@@ -59,6 +75,7 @@ export const sendWhois = async (path, req, rep) => {
   else if (path.searchParams.get("type") !== null)
     type = path.searchParams.get("type");
   else if (req.headers.accept.includes("text/html")) type = "html";
+  else if (req.headers.accept.includes("application/json")) type = "json";
   else if (req.headers.accept.includes("text/javascript")) type = "jsonp";
 
   const address =
@@ -67,6 +84,7 @@ export const sendWhois = async (path, req, rep) => {
   try {
     const answer = await lookup(address);
     //console.log(answer);
+    const format = path.searchParams.get("format") === "true" ? 4 : 0;
 
     switch (type) {
       case "plain":
@@ -78,7 +96,17 @@ export const sendWhois = async (path, req, rep) => {
         const callback = path.searchParams.get("callback") || "ip_186_rip";
         rep.send(`${callback}("${answer}")`);
         break;
+      case "json":
+        rep.setHeader("Content-Type", "application/json; charset=utf-8");
+        rep.send(JSON.stringify(whoisLookuptoJSON(answer),null,format));
+        break;
       case "html":
+        rep.setHeader("Content-Type", "text/html; charset=utf-8");
+        rep.send(await ejs.render(
+          await getPage("whois"),{
+            address: address, answerPlain: answer, highlight, answerJSON: whoisLookuptoJSON(answer),
+          }
+        ));
         break;
       default:
         throw new Error("Invalid method: " + type);
@@ -87,6 +115,7 @@ export const sendWhois = async (path, req, rep) => {
   } catch (e) {
     rep.statusCode = 500;
     rep.send(`500 Server Error\n${e}`);
+    console.warn(e);
   }
 
   return;

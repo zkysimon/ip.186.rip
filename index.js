@@ -9,6 +9,7 @@ const app = new sw2express({
       ? 4
       : os.cpus().length - 1 || 1,
   ETag: true,
+  logger: true,
 });
 
 app.use(async (req, rep) => {

@@ -4,6 +4,7 @@
     "ejs": "^3.1.6",
     "highlight.js": "^11.1.0",
     "maxmind": "^4.3.2",
+    "mime-types": "^2.1.31",
     "sw2express": "^0.0.10-3",
     "whois": "^2.13.5",
     "xml2js": "^0.4.23",
