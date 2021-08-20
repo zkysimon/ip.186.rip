@@ -15,5 +15,5 @@ RUN yarn
 # Bundle app source
 COPY . .
 
-EXPOSE 8080
+EXPOSE 10010
 CMD [ "node", "index.js" ]
