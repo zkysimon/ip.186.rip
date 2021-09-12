@@ -16,23 +16,23 @@ const getkey = (key) => {
 const kv = new WeakMap();
 
 const getPage = async (fileName) => {
-  if (kv.has({ fileName: fileName})) {
+  if (kv.has({ fileName: fileName })) {
     return kv.get({ fileName: fileName });
   } else {
     const value = fs.readFileSync(`./pages/${fileName}.ejs`, {
       encoding: "utf8",
     });
-    kv.set({ fileName:fileName }, new String(value));
+    kv.set({ fileName: fileName }, new String(value));
     return value;
   }
 };
 
 const pageCache = async (key, ifNot) => {
-  if (kv.has({ key: key})) {
-    return kv.get({ key: key});
+  if (kv.has({ key: key })) {
+    return kv.get({ key: key });
   } else {
     const value = await ifNot(key);
-    kv.set({ key:key }, value);
+    kv.set({ key: key }, value);
     return value;
   }
 };
@@ -66,7 +66,7 @@ const sendForIP = async (path, ip, req, rep) => {
   }
   if (
     typeof req.headers["sec-fetch-dest"] !== "undefined" &&
-    req.headers["sec-fetch-dest"] === "script"
+    req.headers["sec-fetch-dest"] === "script" && path.searchParams.get("type") !== null
   )
     type = "jsonp";
   else if (path.searchParams.get("type") !== null)
@@ -78,6 +78,8 @@ const sendForIP = async (path, ip, req, rep) => {
   else if (req.headers.accept.includes("text/javascript")) type = "jsonp";
   else if (req.headers.accept.includes("text/yaml")) type = "yaml";
   else if (path.pathname === "/") type = "plain";
+  if (path.searchParams.get("type") === "esm")
+    type = "esm";
 
   try {
     const format = path.searchParams.get("format") === "true" ? 4 : 0;
@@ -136,12 +138,13 @@ const sendForIP = async (path, ip, req, rep) => {
         rep.setHeader("Content-type", "text/javascript; charset=utf-8");
         const callback = path.searchParams.get("callback") || "ip_186_rip";
         rep.send(
-          `${callback}(${JSON.stringify(
+          `let ip=${JSON.stringify(
             await getFromGeoLite2.getJSON(
               ip,
               path.searchParams.get("lang") || "en"
             )
-          )})`
+          )};if(typeof ${callback}!=="undefined")${callback}(ip);
+          `
         );
         break;
       case "yaml":
@@ -167,10 +170,9 @@ const sendForIP = async (path, ip, req, rep) => {
           path.searchParams.get("lang") || "en"
         );
         rep.send(
-          `${ip}${
-            typeof info.prefixLength !== "undefined"
-              ? "/" + info.prefixLength
-              : ""
+          `${ip}${typeof info.prefixLength !== "undefined"
+            ? "/" + info.prefixLength
+            : ""
           }`
         );
         try {
@@ -181,6 +183,16 @@ const sendForIP = async (path, ip, req, rep) => {
           rep.send("\nInfo not available");
         }
         break;
+      case "esm":
+        rep.setHeader("Content-Type", "application/javascript; charset=utf-8");
+        rep.send(`export default ${JSON.stringify(
+          await getFromGeoLite2.getJSON(
+            ip,
+            path.searchParams.get("lang") || "en"
+          )
+        )
+          }`);
+        break;
       default:
         throw new Error("Type Node Found.");
     }
@@ -189,7 +201,7 @@ const sendForIP = async (path, ip, req, rep) => {
     rep.setHeader("Content-Type", "text/plain; charset=utf-8");
     console.log(e);
     rep.statusCode = 400;
-    rep.end(`400 Bad Request. \n${e}`);
+    rep.end(`400 Bad Request.\n${e} `);
   }
   rep.isEnd = true;
 };
