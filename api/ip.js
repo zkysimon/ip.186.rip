@@ -4,7 +4,7 @@ import xml from "xml2js";
 import yaml from "yaml";
 import fs from "fs";
 import highlight from "highlight.js";
-
+import LRUCache from "./lib/lru.js";
 import crypto from "crypto";
 
 const getkey = (key) => {
@@ -13,26 +13,27 @@ const getkey = (key) => {
   return hash.digest("hex").slice(16);
 };
 
-const kv = new WeakMap();
+const kv = new LRUCache();
 
 const getPage = async (fileName) => {
-  if (kv.has({ fileName: fileName })) {
-    return kv.get({ fileName: fileName });
+  const key = fileName;
+  if (kv.has(key)) {
+    return kv.get(key);
   } else {
     const value = fs.readFileSync(`./pages/${fileName}.ejs`, {
       encoding: "utf8",
     });
-    kv.set({ fileName: fileName }, new String(value));
+    kv.set(key, new String(value));
     return value;
   }
 };
 
 const pageCache = async (key, ifNot) => {
-  if (kv.has({ key: key })) {
-    return kv.get({ key: key });
+  if (kv.has(key)) {
+    return kv.get(key);
   } else {
     const value = await ifNot(key);
-    kv.set({ key: key }, value);
+    kv.set(key, value);
     return value;
   }
 };
@@ -64,9 +65,11 @@ const sendForIP = async (path, ip, req, rep) => {
   if (path.searchParams.get("ip") !== null) {
     ip = path.searchParams.get("ip");
   }
-  if (
+  if (path.pathname === "/ESM") type = "esm";
+  else if (
     typeof req.headers["sec-fetch-dest"] !== "undefined" &&
-    req.headers["sec-fetch-dest"] === "script" && path.searchParams.get("type") !== null
+    req.headers["sec-fetch-dest"] === "script" &&
+    path.searchParams.get("type") !== null
   )
     type = "jsonp";
   else if (path.searchParams.get("type") !== null)
@@ -78,11 +81,14 @@ const sendForIP = async (path, ip, req, rep) => {
   else if (req.headers.accept.includes("text/javascript")) type = "jsonp";
   else if (req.headers.accept.includes("text/yaml")) type = "yaml";
   else if (path.pathname === "/") type = "plain";
-  if (path.searchParams.get("type") === "esm")
-    type = "esm";
+  if (path.searchParams.get("type") === "esm") type = "esm";
 
   try {
     const format = path.searchParams.get("format") === "true" ? 4 : 0;
+    const key = getkey(
+      `page-index${ip}${path.searchParams.get("lang") || "en"}${type}${format}`
+    );
+    console.log(`[${new Date()}] ${ip} ${type} => ${key}`)
     switch (type) {
       case "json":
         rep.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -106,12 +112,11 @@ const sendForIP = async (path, ip, req, rep) => {
           path.searchParams.get("lang") || "en"
         );
         rep.setHeader("Content-type", "text/html; charset=utf-8");
-        const key = getkey(
-          `page-index${ip}${path.searchParams.get("lang") || "en"}`
-        );
         rep.setHeader("X-Request-ID", key);
+        rep.setHeader("X-Cache","HIT");
         rep.send(
           await pageCache(key, async (key) => {
+            rep.setHeader("X-Cache","MISS");
             return await ejs.render(
               await getPage("index"),
               { ip: ip, info: ipinfo, highlight, key },
@@ -170,9 +175,10 @@ const sendForIP = async (path, ip, req, rep) => {
           path.searchParams.get("lang") || "en"
         );
         rep.send(
-          `${ip}${typeof info.prefixLength !== "undefined"
-            ? "/" + info.prefixLength
-            : ""
+          `${ip}${
+            typeof info.prefixLength !== "undefined"
+              ? "/" + info.prefixLength
+              : ""
           }`
         );
         try {
@@ -185,13 +191,14 @@ const sendForIP = async (path, ip, req, rep) => {
         break;
       case "esm":
         rep.setHeader("Content-Type", "application/javascript; charset=utf-8");
-        rep.send(`export default ${JSON.stringify(
-          await getFromGeoLite2.getJSON(
-            ip,
-            path.searchParams.get("lang") || "en"
-          )
-        )
-          }`);
+        rep.send(
+          `export default ${JSON.stringify(
+            await getFromGeoLite2.getJSON(
+              ip,
+              path.searchParams.get("lang") || "en"
+            )
+          )}`
+        );
         break;
       default:
         throw new Error("Type Node Found.");

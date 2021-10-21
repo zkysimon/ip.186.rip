@@ -5,36 +5,38 @@ import fs from "fs";
 import mime from "mime-types";
 import path from "path";
 
-const kv = new WeakMap();
 const isSendScript = (headers) =>
   typeof headers["sec-fetch-dest"] !== "undefined" &&
   req.headers["sec-fetch-dest"] === "script";
-const sendAssets = async(pathRoute,req,rep) => {
-  const file = pathRoute.pathname.replace("/assets/","").replace("..","");
-  if(!fs.existsSync(`pages/assets/${file}`)){
+const sendAssets = async (pathRoute, req, rep) => {
+  const file = pathRoute.pathname.replace("/assets/", "").replace("..", "");
+  if (!fs.existsSync(`pages/assets/${file}`)) {
     rep.statusCode = 404;
     rep.send("404 Not Found.");
-  }else{
-    await new Promise(resolve=>{
-      rep.setHeader("Content-Type",mime.contentType(path.extname(file)));
-      rep.setHeader("Content-Length",fs.statSync(`pages/assets/${file}`).size);
+  } else {
+    await new Promise((resolve) => {
+      rep.setHeader("Content-Type", mime.contentType(path.extname(file)));
+      rep.setHeader("Content-Length", fs.statSync(`pages/assets/${file}`).size);
       rep.setHeader("Cache-Control", "public, max-age=600");
       resolve();
-    }).then(e=>{
-      const content = fs.readFileSync(`pages/assets/${file}`,{
-        encoding: 'utf8',
+    }).then((e) => {
+      const content = fs.readFileSync(`pages/assets/${file}`, {
+        encoding: "utf8",
       });
       rep.send(content);
-    })
+    });
   }
-  rep.end('\n');
+  rep.end("\n");
   return;
-}
+};
 async function route(req, rep) {
   const path = new URL(req.path, `https://about.address`);
   if (path.pathname.startsWith("/assets/")) {
-    await sendAssets(path,req,rep);
+    await sendAssets(path, req, rep);
     return;
+  }
+  if (path.pathname === "/ESM") {
+    await sendIP(path, req.realip, req, rep);
   }
   if (path.pathname === "/") {
     await sendIP(path, rep.realip, req, rep);

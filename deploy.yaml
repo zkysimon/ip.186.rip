@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ip-186-rip
+  namespace: apps
+  labels:
+    app: ip-186-rip
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ip-186-rip
+  template:
+    metadata:
+      labels:
+        app: ip-186-rip
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values: [arm64]
+      containers:
+        - name: sunoaki
+          image: "186526/ip.186.rip"
+          imagePullPolicy: "Always"
+          resources:
+            limits:
+              memory: 96Mi
+              cpu: 1000m
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "80"
+            - name: NODENAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ip-186-rip-svc
+  namespace: apps
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      name: web
+  selector:
+    app: ip-186-rip

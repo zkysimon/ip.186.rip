@@ -1,4 +1,4 @@
-FROM node:lts
+FROM node:lts-alpine
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 # where available (npm@5+)
 COPY package*.json ./
 
-RUN yarn
+RUN yarn config set registry https://registry.npm.taobao.org/ && yarn
 # If you are building your code for production
 # RUN npm ci --only=production
 

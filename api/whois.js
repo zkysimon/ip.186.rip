@@ -1,70 +1,75 @@
 import whois from "whois";
+whois.SERVERS["xyz"] = "whois.nic.xyz";
 import ejs from "ejs";
 import highlight from "highlight.js";
 import fs from "fs";
-const kv = new WeakMap();
+import LRUCache from "./lib/lru.js";
+
+const kv = new LRUCache();
 const lookup = async (address) => {
-  if (kv.has({ address:address })) {
-    resolve(kv.get({ address:address }));
+  if (kv.has(address)) {
+    return kv.get(address);
   } else {
     const data = await new Promise((resolve, reject) => {
       whois.lookup(address, (err, data) => {
         if (err) reject(err);
         else resolve(data);
       });
-    })
-    kv.set({ address:address }, data);
+    });
+    kv.set(address, data);
     return data;
   }
 };
 const getPage = async (fileName) => {
-  if (kv.has({ fileName:fileName })) {
-    return kv.get({ fileName:fileName });
+  if (kv.has(fileName)) {
+    return kv.get(fileName);
   } else {
     const value = fs.readFileSync(`./pages/${fileName}.ejs`, {
       encoding: "utf8",
     });
-    kv.set({ fileName:fileName }, new String(value));
+    kv.set(fileName, new String(value));
     return value;
   }
 };
 export const whoisLookup = lookup;
 export const whoisLookuptoJSON = (data) => {
-  let attr, attrColon, tempStr = '', returnArray = [];
-  data.split('\n').forEach(part => {
+  let attr,
+    attrColon,
+    tempStr = "",
+    returnArray = [];
+  data.split("\n").forEach((part) => {
     if (!part) return;
 
-    attrColon = part.indexOf(': ');
+    attrColon = part.indexOf(": ");
     attr = part.substr(0, attrColon);
 
-    if (attr !== '') {
+    if (attr !== "") {
       returnArray.push({
         attribute: attr,
-        value: part.substr(attrColon + 1).trim()
+        value: part.substr(attrColon + 1).trim(),
       });
-    }
-    else {
-      tempStr += part.substr(attrColon + 1).trim() + '\n';
+    } else {
+      tempStr += part.substr(attrColon + 1).trim() + "\n";
     }
   });
 
   returnArray.push({
-    "attribute": "End Text",
-    "value": tempStr
+    attribute: "End Text",
+    value: tempStr,
   });
 
   return returnArray;
-}
+};
 export const whoisLookupJSON = async (address) => {
-  if (kv.has({ address: address + '-json' })) {
-    resolve(kv.get({ address: address + '-json' }));
+  if (kv.has({ address: address + "-json" })) {
+    resolve(kv.get({ address: address + "-json" }));
   } else {
     const data = await lookup(address);
     const answer = whoisLookuptoJSON(data);
-    kv.set({ address: address + '-json' }, answer);
+    kv.set({ address: address + "-json" }, answer);
     return answer;
   }
-}
+};
 export const sendWhois = async (path, req, rep) => {
   var type = "plain";
   if (
@@ -98,15 +103,18 @@ export const sendWhois = async (path, req, rep) => {
         break;
       case "json":
         rep.setHeader("Content-Type", "application/json; charset=utf-8");
-        rep.send(JSON.stringify(whoisLookuptoJSON(answer),null,format));
+        rep.send(JSON.stringify(whoisLookuptoJSON(answer), null, format));
         break;
       case "html":
         rep.setHeader("Content-Type", "text/html; charset=utf-8");
-        rep.send(await ejs.render(
-          await getPage("whois"),{
-            address: address, answerPlain: answer, highlight, answerJSON: whoisLookuptoJSON(answer),
-          }
-        ));
+        rep.send(
+          await ejs.render(await getPage("whois"), {
+            address: address,
+            answerPlain: answer,
+            highlight,
+            answerJSON: whoisLookuptoJSON(answer),
+          })
+        );
         break;
       default:
         throw new Error("Invalid method: " + type);

@@ -3,10 +3,12 @@ import sw2express from "sw2express";
 import process from "process";
 import os from "os";
 
+globalThis.os = os;
+
 const app = new sw2express({
   cluster:
     process.env.CLUSTER || os.cpus().length - 1 > 4
-      ? 4
+      ? 1
       : os.cpus().length - 1 || 1,
   ETag: false,
   logger: true,
